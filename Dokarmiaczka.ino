@@ -38,10 +38,13 @@ TM1637Display display(CLK, DIO); //set up the 4-Digit Display.
 
 void feed(int times);
 
+WidgetLCD lcd(V5);
+
 BLYNK_WRITE(V3)
 {
     ::feed_x_times = param.asInt(); // assigning incoming value from pin V3 to a variable
     display.showNumberDec(feed_x_times); //Display the numCounter value;
+lcd.clear(); //Use it to clear the LCD Widget lcd.print(0, 0, ; ::feed_x_times);
 }
 
 BLYNK_WRITE(V4)
@@ -81,6 +84,8 @@ void function()
     Serial.print("V3 Slider value is: ");
     Serial.println(String(::feed_x_times));
     display.setSegments(DOIN);
+lcd.clear(); //Use it to clear the LCD Widget lcd.print(0, 0, "zaczynam" );
+lcd.print(1,0, "karmienie");
     // startup music
     delay(3000);
     feed(feed_x_times);
@@ -92,13 +97,17 @@ void feed(int times)
         display.showNumberDecEx(0,64);
         int d  = combine(times, i);
         display.showNumberDec(d); //Display the numCounter value;
+lcd.clear(); //Use it to clear the LCD Widget lcd.print(0, 0, d);
         //dispense food
         delay(1000);// delay for slow food eating
     }
    // beep done
    display.setSegments(DONE);
+lcd.clear(); //Use it to clear the LCD Widget lcd.print(0, 0, ; "Skonczone" );
+lcd.print(1,0, d);
    delay(2000);
    ///set display to none
+lcd.clear();
 }
 
 int combine(int a, int b) {
