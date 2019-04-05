@@ -25,8 +25,8 @@ const uint8_t DONE [ ] = {
     SEG_A | SEG_D | SEG_E | SEG_F | SEG_G, // E
 };
 
-const uint8_t GOIN [ ] = {
-    SEG_A | SEG_B | SEG_C | SEG_D | SEG_F | SEG_G, //g
+const uint8_t DOIN [ ] = {
+    SEG_B | SEG_C | SEG_D | SEG_E | SEG_G, //d
     SEG_C | SEG_D | SEG_E | SEG_G, //  o
     SEG_C, //i
     SEG_C | SEG_E | SEG_G, // n
@@ -80,10 +80,9 @@ void function()
 {
     Serial.print("V3 Slider value is: ");
     Serial.println(String(::feed_x_times));
-    delay(500);
-    display.setSegments(GOIN);
+    display.setSegments(DOIN);
     // startup music
-    delay(7000);
+    delay(3000);
     feed(feed_x_times);
 }
 
@@ -103,12 +102,5 @@ void feed(int times)
 }
 
 int combine(int a, int b) {
-   int ona = 1;
-   while (ona <= b)
-      ona *= 10;
-   if (a < 10){
-      return a*ona*10 + b;
-   } else {
-     return a*ona + b;
-   }
+      return a*100 + b;
 } 
