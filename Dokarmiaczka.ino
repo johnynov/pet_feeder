@@ -1,4 +1,4 @@
-feed_max#include <Arduino.h>
+#include <Arduino.h>
 #include <TM1637Display.h>
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
@@ -18,13 +18,7 @@ char auth[] = "259452416c1b4ef9bf87cd824cabf9ad";
 const long interval = 2000; //interval how many miliseconds button should be pushed
 int feed_x_times = 10;
 int on_off_state, readiness;
-int dispense_delay = 2000;
-//buzzer variables
-int frequency=100; //Specified in Hz
-int buzzPin=D3;
-int timeOn=100; //specified in milliseconds
-int timeOff=100; //specified in millisecods
-int hop = 50; // Hz increase in loop
+int dispense_delay = 500;
 
 const uint8_t DONE [ ] = {
     SEG_B | SEG_C | SEG_D | SEG_E | SEG_G, //d
@@ -66,6 +60,38 @@ const int DIO = D2; //Set the DIO pin connection to the display
 const int UP = D6;  // Set input pin for physical button "+ 1 PORTION"
 const int DOWN = D5;  // Set input pin for physical button "- 1 PORTION"
 const int FEED = D0; // Set input pin for physical button FEED
+const int buzzer_pin = D3;// buzzre pin
+
+struct MusicStruct {
+  int A = 550;
+  int As = 582;
+  int B = 617;
+  int C = 654;
+  int Cs = 693;
+  int D = 734;
+  int Ds = 777;
+  int E = 824;
+  int F = 873;
+  int Fs = 925;
+  int G = 980;
+  int Gs = 1003;
+  int A2 = 1100;
+  int A2s = 1165;
+  int B2 = 1234;
+  int C3 = 1308;
+  int C3s = 1385;
+  int D3 = 1555;
+}Music;
+
+struct LengthStruct {
+  float half = 0.5;
+  float one = 1.0;
+  float one_half = 1.5;
+  float two = 2.0;
+  float two_half = 2.5;
+}Length;
+
+int tempo = 400;
 
 int upstate = digitalRead(UP);
 int downstate = digitalRead(DOWN);
@@ -78,7 +104,7 @@ TM1637Display display(CLK, DIO); //set up the 4-Digit Display.
 int value = 1244;
 uint8_t segto = 0x80 | display.encodeDigit((value / 100)%10);
 
-void play_music(int i);
+void play_music();
 void feed(int times);
 void function();
 
@@ -114,6 +140,7 @@ void setup()
     Serial.begin(115200);
     Serial.println("Script initialization...");
     Blynk.begin(auth, ssid, pass);
+    pinMode(buzzer_pin, OUTPUT);
     display.setBrightness(0x0a); //set the diplay to maximum brightnes
     display.setSegments(REDY);
     delay(1000);
@@ -128,37 +155,22 @@ void loop()
 {
     Blynk.run();
     timer.run();
-
-    if( (digitalRead(UP) == 1) && (::feed_x_times < feed_max)){
-        upstate = 1;
-        Serial.println("UP");
-    } else if ((digitalRead(UP) == 1) && (::feed_x_times == feed_max)) {
-        display.setSegments(R15);
-    } else if ((digitalRead(UP) == 0) && (::feed_x_times == feed_max)) {
-        display.showNumberDec(::feed_x_times); //
-    } else if ((digitalRead(UP) == 0) && (::feed_x_times < feed_max) && (upstate == 0)) {
-        display.showNumberDec(::feed_x_times);
-    } else if ((digitalRead(UP) == 0) && (::feed_x_times < feed_max) && (upstate == 1)) {
-        ::feed_x_times += 1;
-        display.showNumberDec(::feed_x_times); //
-        upstate = 0;
-    }
-
-    if( (digitalRead(UP) == 1) && {
-        if (::feed_x_times < feed_max)){
+    if( digitalRead(UP) == 1) {
+        if (::feed_x_times < feed_max){
             upstate = 1;
             Serial.println("UP");
-        } else if ((::feed_x_times == feed_max)) {
+        } else if (::feed_x_times == feed_max) {
             display.setSegments(R15);
         }
-    } else if (digitalRead(UP) == 0) {
-        if ( ::feed_x_times == feed_max) {
-            display.showNumberDec(::feed_x_times);
-        } if (::feed_x_times < feed_max) {
-            if (upstate == 0)) {
+        else if (digitalRead(UP) == 0) {
+            if ( ::feed_x_times == feed_max) {
                 display.showNumberDec(::feed_x_times);
-            } else if (upstate == 1)) {
-                ::feed_x_times += 1;
+            } if (::feed_x_times < feed_max) {
+                if (upstate == 0) {
+                    display.showNumberDec(::feed_x_times);
+                } else if (upstate == 1) {
+                    ::feed_x_times += 1;
+                }
             }
         }
     }
@@ -186,35 +198,28 @@ void loop()
     }
 }
 
-void play_music(int portion){
-  int toner;
-  if (portion > 10){
-    for (int i=1; i<11; i++){
-    toner = frequency + i*hop;
-    tone(buzzPin, toner);
-    Serial.println(toner);
-    delay(timeOn);
-    noTone(buzzPin);
-    delay(timeOff);
-    }
-    for (int i=1; i<(portion - 9); i++){
-      tone(buzzPin, toner - i*hop);
-      Serial.println(toner - i*hop);
-      delay(timeOn);
-      noTone(buzzPin);
-      delay(timeOff);
-    }
-  } else {
-  for (int i=1; i<portion; i++){
-    toner = frequency + i*hop;
-    tone(buzzPin, toner);
-    Serial.println(toner);
-    delay(timeOn);
-    noTone(buzzPin);
-    delay(timeOff);
-    }
-  }
-    Serial.println();
+void setTone(int pin, int note, int duration) {
+  tone(pin, note, duration);
+  delay(duration);
+  noTone(pin);
+}
+
+void play_music(){
+    setTone(buzzer_pin, Music.B, tempo * Length.one);
+    setTone(buzzer_pin, Music.E, tempo * Length.one_half);
+    setTone(buzzer_pin, Music.G, tempo * Length.half);
+    setTone(buzzer_pin, Music.F, tempo * Length.one);
+    setTone(buzzer_pin, Music.E, tempo * Length.two);
+    setTone(buzzer_pin, Music.B2, tempo * Length.one);
+    setTone(buzzer_pin, Music.A2, tempo * Length.two_half);
+    setTone(buzzer_pin, Music.Fs, tempo * Length.two_half);
+
+    setTone(buzzer_pin, Music.E, tempo * Length.one_half);
+    setTone(buzzer_pin, Music.G, tempo * Length.half);
+    setTone(buzzer_pin, Music.F, tempo * Length.one);
+    setTone(buzzer_pin, Music.Ds, tempo * Length.two);
+    setTone(buzzer_pin, Music.F, tempo * Length.one);
+    setTone(buzzer_pin, Music.B, tempo * Length.two_half);
 }
 
 void function()
@@ -225,7 +230,7 @@ void function()
     lcd.clear(); //Use it to clear the LCD Widget lcd.print(0, 0, "zaczynam" );
     lcd.print(0,0, "Zaczynam");
     lcd.print(0,1, "karmienie..");
-    play_music(feed_x_times);
+    play_music();
     delay(3000);
     lcd.clear(); //Use it to clear the LCD Widget lcd.print(0, 0, "zaczynam" );
     feed(feed_x_times);
