@@ -1,4 +1,4 @@
-#include <Arduino.h>
+feed_max#include <Arduino.h>
 #include <TM1637Display.h>
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
@@ -19,6 +19,12 @@ const long interval = 2000; //interval how many miliseconds button should be pus
 int feed_x_times = 10;
 int on_off_state, readiness;
 int dispense_delay = 2000;
+//buzzer variables
+int frequency=100; //Specified in Hz
+int buzzPin=D3;
+int timeOn=100; //specified in milliseconds
+int timeOff=100; //specified in millisecods
+int hop = 50; // Hz increase in loop
 
 const uint8_t DONE [ ] = {
     SEG_B | SEG_C | SEG_D | SEG_E | SEG_G, //d
@@ -48,11 +54,11 @@ const uint8_t R15 [ ] = {
     SEG_A | SEG_C | SEG_D | SEG_F | SEG_G,  // 5
 };
 
-const uint8_t R4 [ ] = {
+const uint8_t R5 [ ] = {
     SEG_E | SEG_G,// r
     0x00,
     0x00,
-    SEG_B | SEG_C | SEG_F | SEG_G,  //4
+    SEG_A | SEG_C | SEG_D | SEG_F | SEG_G,  //4
 };
 
 const int CLK = D1; //Set the CLK pin connection to the display
@@ -64,14 +70,18 @@ const int FEED = D0; // Set input pin for physical button FEED
 int upstate = digitalRead(UP);
 int downstate = digitalRead(DOWN);
 int feedstate = 0;
+int feed_min = 5;
+int feed_max = 15;
 
 TM1637Display display(CLK, DIO); //set up the 4-Digit Display.
 
 int value = 1244;
 uint8_t segto = 0x80 | display.encodeDigit((value / 100)%10);
 
+void play_music(int i);
 void feed(int times);
 void function();
+
 //void combine(int i, int times);
 
 WidgetLCD lcd(V5);
@@ -118,31 +128,51 @@ void loop()
 {
     Blynk.run();
     timer.run();
-    if( (digitalRead(UP) == 1) && (::feed_x_times < 15)){
+
+    if( (digitalRead(UP) == 1) && (::feed_x_times < feed_max)){
         upstate = 1;
         Serial.println("UP");
-    } else if ((digitalRead(UP) == 1) && (::feed_x_times == 15)) {
+    } else if ((digitalRead(UP) == 1) && (::feed_x_times == feed_max)) {
         display.setSegments(R15);
-    } else if ((digitalRead(UP) == 0) && (::feed_x_times == 15)) {
+    } else if ((digitalRead(UP) == 0) && (::feed_x_times == feed_max)) {
         display.showNumberDec(::feed_x_times); //
-    } else if ((digitalRead(UP) == 0) && (::feed_x_times < 15) && (upstate == 0)) {
+    } else if ((digitalRead(UP) == 0) && (::feed_x_times < feed_max) && (upstate == 0)) {
         display.showNumberDec(::feed_x_times);
-    } else if ((digitalRead(UP) == 0) && (::feed_x_times < 15) && (upstate == 1)) {
+    } else if ((digitalRead(UP) == 0) && (::feed_x_times < feed_max) && (upstate == 1)) {
         ::feed_x_times += 1;
         display.showNumberDec(::feed_x_times); //
         upstate = 0;
     }
-    if ((digitalRead(DOWN) == 1) && (::feed_x_times > 4)){
+
+    if( (digitalRead(UP) == 1) && {
+        if (::feed_x_times < feed_max)){
+            upstate = 1;
+            Serial.println("UP");
+        } else if ((::feed_x_times == feed_max)) {
+            display.setSegments(R15);
+        }
+    } else if (digitalRead(UP) == 0) {
+        if ( ::feed_x_times == feed_max) {
+            display.showNumberDec(::feed_x_times);
+        } if (::feed_x_times < feed_max) {
+            if (upstate == 0)) {
+                display.showNumberDec(::feed_x_times);
+            } else if (upstate == 1)) {
+                ::feed_x_times += 1;
+            }
+        }
+    }
+
+    if ((digitalRead(DOWN) == 1) && (::feed_x_times > feed_min)){
         downstate = 1;
         Serial.println("DOWN");
-    } else if ((digitalRead(DOWN) == 1) && (::feed_x_times == 4 )) {
-        display.setSegments(R4);
-    } else if ((digitalRead(DOWN) == 0) && (::feed_x_times == 4 )) {
+    } else if ((digitalRead(DOWN) == 1) && (::feed_x_times == feed_min )) {
+        display.setSegments(R5);
+    } else if ((digitalRead(DOWN) == 0) && (::feed_x_times == feed_min )) {
         display.showNumberDec(::feed_x_times);
-    } else if ((digitalRead(DOWN) == 0) && (::feed_x_times > 4) && (downstate == 0)){
+    } else if ((digitalRead(DOWN) == 0) && (::feed_x_times > feed_min) && (downstate == 0)){
         display.showNumberDec(::feed_x_times);
-    } else if ((digitalRead(DOWN) == 0) && (::feed_x_times > 4) && (downstate == 1)){
-        display.showNumberDec(::feed_x_times);
+    } else if ((digitalRead(DOWN) == 0) && (::feed_x_times > feed_min) && (downstate == 1)){
         ::feed_x_times -= 1;
         display.showNumberDec(::feed_x_times);
         downstate = 0;
@@ -156,6 +186,37 @@ void loop()
     }
 }
 
+void play_music(int portion){
+  int toner;
+  if (portion > 10){
+    for (int i=1; i<11; i++){
+    toner = frequency + i*hop;
+    tone(buzzPin, toner);
+    Serial.println(toner);
+    delay(timeOn);
+    noTone(buzzPin);
+    delay(timeOff);
+    }
+    for (int i=1; i<(portion - 9); i++){
+      tone(buzzPin, toner - i*hop);
+      Serial.println(toner - i*hop);
+      delay(timeOn);
+      noTone(buzzPin);
+      delay(timeOff);
+    }
+  } else {
+  for (int i=1; i<portion; i++){
+    toner = frequency + i*hop;
+    tone(buzzPin, toner);
+    Serial.println(toner);
+    delay(timeOn);
+    noTone(buzzPin);
+    delay(timeOff);
+    }
+  }
+    Serial.println();
+}
+
 void function()
 {
     Serial.print("V3 Slider value is: ");
@@ -164,7 +225,7 @@ void function()
     lcd.clear(); //Use it to clear the LCD Widget lcd.print(0, 0, "zaczynam" );
     lcd.print(0,0, "Zaczynam");
     lcd.print(0,1, "karmienie..");
-    // startup music
+    play_music(feed_x_times);
     delay(3000);
     lcd.clear(); //Use it to clear the LCD Widget lcd.print(0, 0, "zaczynam" );
     feed(feed_x_times);
@@ -172,15 +233,15 @@ void function()
 
 void feed(int times)
 {
-    uint8_t segto; // COLCON PART 
+    uint8_t segto; // COLCON PART
     int value = 1244; // COLCON PART
     display.setSegments(&segto, 1, 1);
     for(int i=1; i <= times; ++i){
         display.showNumberDecEx(0,64);
-        segto = 0x80 | display.encodeDigit((value / 100)%10);// COLCON PART
-        display.setSegments(&segto, 1, 1); // COLON PART
         int d  = combine(times, i);
-        display.showNumberDec(d); //Display the numCounter value;
+        segto = 0x80 | display.encodeDigit(d);// COLCON PART
+        display.setSegments(&segto, 0, 0); // COLON PART
+        //        display.showNumberDec(d); //Display the numCounter value;
         lcd.print (0, 0, "Wydawanie"); //Use it to clear the LCD Widget lcd.print(0, 0, d);
         lcd.print (0, 1, (String(i) + " z " + String(times) + "  " + String(dispense_delay/1000) + " sek")); //Use it to clear the LCD Widget lcd.print(0, 0, d);
         //dispense food
